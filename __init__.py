@@ -10,6 +10,8 @@ http://inamidst.com/phenny/
 import sys, os, time, threading, signal
 import bot
 
+from twisted.internet import reactor, ssl
+
 class Watcher(object): 
    # Cf. http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/496735
    def __init__(self):
@@ -33,8 +35,13 @@ def run_phenny(config):
    else: delay = 20
 
    def connect(config): 
-      p = bot.Phenny(config)
-      p.run(config.host, config.port, config.ssl)
+      f = bot.PhennyFactory(config)
+      if config.ssl:
+         reactor.connectSSL(config.host, config.port, f,
+                 ssl.ClientContextFactory())
+      else:
+         reactor.connectTCP(config.host, config.port, f)
+      reactor.run()
 
    try: Watcher()
    except Exception, e: 

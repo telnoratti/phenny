@@ -9,6 +9,7 @@ http://inamidst.com/phenny/
 
 import sys, os, re, threading, imp
 import irc
+import twisted.words.protocols.irc
 
 home = os.getcwd()
 
@@ -19,6 +20,13 @@ def decode(bytes):
       except UnicodeDecodeError: 
          text = bytes.decode('cp1252')
    return text
+
+class PhennyFactory(irc.BotFactory):
+   def __init__(self, config):
+      self.config = config
+
+   def buildProtocol(self, addr):
+      return Phenny(self.config)
 
 class Phenny(irc.Bot): 
    def __init__(self, config): 
@@ -73,6 +81,11 @@ class Phenny(irc.Bot):
       self.bind_commands()
 
    def register(self, variables): 
+      # deal with twisted method conflict
+      if type(variables) == str:
+          return twisted.words.protocols.irc.IRCClient.register(self,
+                  variables)
+
       # This is used by reload.py, hence it being methodised
       for name, obj in variables.iteritems(): 
          if hasattr(obj, 'commands') or hasattr(obj, 'rule'): 
