@@ -9,9 +9,13 @@ import random
 import configparser
 import os
 import web
+import requests
+import json
 from lxml import etree
 from datetime import datetime
 
+YOUTUBE_API_KEY = "AIzaSyBkkrsLKr0gJ_3eMR3ydy06RjNb5uXExnE"
+YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search"
 APIKEY = "f8f2a50033d7385e547fccbae92b2138"
 APIURL = "http://ws.audioscrobbler.com/2.0/?api_key="+APIKEY+"&"
 AEPURL = "http://www.davethemoonman.com/lastfm/aep.php?format=txt&username="
@@ -68,7 +72,7 @@ def lastfm_set(phenny, input):
 
 lastfm_set.rule = (['lastfm-set'], r'(\S+)\s+(?:(.*?),(.*)|(\S+))')
 
-def now_playing(phenny, input):
+def now_playing(phenny, input, youtube=False):
     nick = input.nick
     user = ""
     arg = input.group(2)
@@ -120,15 +124,41 @@ def now_playing(phenny, input):
         date = tags['date'].get("uts")
         stamp = int(date)
 
-    if now:
+    if now and not youtube:
         present = get_verb(nick)[1]
         phenny.say("%s %s \"%s\" by %s on %s" %(user.strip(), present.strip(), track, artist, album ))
         return
-    else:
+    elif now and youtube:
+        present = get_verb(nick)[1]
+        phenny.say("%s %s %s" %(user.strip(), present.strip(), get_youtube(track, artist, album)))
+        return
+    elif not now and not youtube:
         past = get_verb(nick)[0]
         phenny.say("%s %s \"%s\" by %s on %s %s" %(user.strip(), past.strip(), track, artist, album, pretty_date(stamp)))
+        return
+    elif not now and youtube:
+        past = get_verb(nick)[0]
+        phenny.say("%s %s %s %s" %(user.strip(), past.strip(), get_youtube(track, artist, album), pretty_date(stamp)))
+        return
 
 now_playing.commands = ['np']
+
+def youtube(phenny, input):
+    now_playing(phenny, input, youtube=True)
+youtube.commands = ['nptube']
+
+def get_youtube(track, artist, album):
+    search_response = requests.get(YOUTUBE_API_URL, params={
+        "q": "{0} {1}".format(track, artist),
+        "maxResults": "1",
+        "fields": "items/id/videoId,items/snippet/title",
+        "type": "youtube#video",
+        "part": "id,snippet",
+        "key": YOUTUBE_API_KEY,
+    })
+    search_response = search_response.json()["items"][0]
+    return 'https://youtu.be/{0} "{1}"'.format(search_response["id"]["videoId"], search_response["snippet"]["title"])
+
 
 def tasteometer(phenny, input):
     input1 = input.group(2)
