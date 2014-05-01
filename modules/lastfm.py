@@ -3,6 +3,7 @@
 """
 lastfm.py - lastfm module
 author: Casey Link <unnamedrambler@gmail.com>
+
 """
 
 import random
@@ -156,6 +157,7 @@ def get_youtube(track, artist, album):
         "part": "id,snippet",
         "key": YOUTUBE_API_KEY,
     })
+    print(search_response.json())
     search_response = search_response.json()["items"][0]
     return 'https://youtu.be/{0} "{1}"'.format(search_response["id"]["videoId"], search_response["snippet"]["title"])
 
