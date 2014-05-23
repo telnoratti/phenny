@@ -3,3 +3,5 @@ mock
 nose
 requests
 ago
+beautifulsoup4
+

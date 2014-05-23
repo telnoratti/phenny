@@ -7,8 +7,10 @@ author: Telnoratti <telnoratti@gmail.com>
 import requests
 from bs4 import BeautifulSoup
 
-SEARCH_API = "http://metal-archives.com/search/ajax-advanced/searching/"
-DISCO_API = "http://metal-archives.com/band/discography/id/"
+from lastfm import get_youtube
+
+SEARCH_API = "http://www.metal-archives.com/search/ajax-advanced/searching/"
+DISCO_API = "http://www.metal-archives.com/band/discography/id/"
 
 def artist(phenny, input):
     print(input.groups()[1])
@@ -43,7 +45,7 @@ def artist(phenny, input):
 
 artist.example = '.artist Epica'
 artist.name = 'artist'
-artist.commands = ['artist']
+artist.commands = ['artist', 'artists']
 
 def album(phenny, input):
     r = requests.get(SEARCH_API + "albums", params={
@@ -99,7 +101,51 @@ def album(phenny, input):
 
 album.example = '.album The Divine Conspiracy'
 album.name = 'album'
-album.commands = ['album']
+album.commands = ['album', 'albums']
+
+def song(phenny, input):
+    r = requests.get(SEARCH_API + "songs", params={
+        "songTitle": input.groups()[1],
+        "releaseType[]": 1,
+    }).json()["aaData"]
+    if len(r) == 0:
+        r = requests.get(SEARCH_API + "songs", params={
+            "songTitle": input.groups()[1],
+        }).json()["aaData"]
+        if len(r) == 0:
+            phenny.say("Couldn't find any albums by that name.")
+            return
+    elif len(r) > 5:
+        r2 = requests.get(SEARCH_API + "songs", params={
+            "songTitle": input.groups()[1],
+            "releaseType[]": 1,
+            "exactReleaseMatch": 1,
+        }).json()["aaData"]
+        if len(r2) == 0:
+            r2 = requests.get(SEARCH_API + "songs", params={
+                "songTitle": input.groups()[1],
+                "exactReleaseMatch": 1,
+            }).json()["aaData"]
+        if len(r2) == 0 or len(r2) > 5:
+            phenny.say("Too many results, try a more exact search")
+            return
+        r = r2
+    print(r)
+    song = r[0]
+
+    artist = BeautifulSoup(song[0]).text
+    album = BeautifulSoup(song[1]).text
+    title = song[2]
+    link = get_youtube(title, artist, album)
+    phenny.say('{0} - "{1}" from "{2}" -- {3}'.format(
+        artist,
+        title,
+        album,
+        link))
+
+song.example = '.song Obsessive Devotion'
+song.name = 'song'
+song.commands = ['song', 'songs']
 
 def getbandinfo(bandurl):
     r = BeautifulSoup(requests.get(bandurl).text)
